@@ -1,0 +1,122 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CallStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum CallRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  CONTACT
+}
+
+model Contact {
+  id          String               @id @default(cuid())
+  name        String
+  phoneNumber String               @unique
+  notes       String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  calls       Call[]
+  instruction ContactInstruction?
+}
+
+model ContactInstruction {
+  id        String   @id @default(cuid())
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  contactId String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CustomInstruction {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Call {
+  id        String      @id @default(cuid())
+  callSid   String?     @unique
+  contact   Contact?    @relation(fields: [contactId], references: [id])
+  contactId String?
+  direction CallDirection
+  status    CallStatus  @default(PENDING)
+  goal      String?
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  logs      CallLog[]
+  summary   CallSummary?
+  metadata  Json?
+  intent    CallIntent?
+  schedule  CallSchedule?
+}
+
+model CallLog {
+  id        String    @id @default(cuid())
+  call      Call      @relation(fields: [callId], references: [id])
+  callId    String
+  role      CallRole
+  content   String
+  createdAt DateTime  @default(now())
+  metadata  Json?
+}
+
+model CallSummary {
+  id          String   @id @default(cuid())
+  call        Call     @relation(fields: [callId], references: [id])
+  callId      String   @unique
+  summary     String
+  nextSteps   String?
+  followUpBy  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model CallInstructionTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CallIntent {
+  id          String   @id @default(cuid())
+  call        Call     @relation(fields: [callId], references: [id])
+  callId      String   @unique
+  intent      String
+  confidence  Float
+  createdAt   DateTime @default(now())
+}
+
+model CallSchedule {
+  id          String   @id @default(cuid())
+  call        Call     @relation(fields: [callId], references: [id])
+  callId      String   @unique
+  scheduledAt DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+}
